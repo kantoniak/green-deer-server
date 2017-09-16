@@ -5,16 +5,19 @@ import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.util.logging.Logger;
+import com.google.protobuf.Timestamp;
 import com.kantoniak.greendeer.proto.Run;
 import com.kantoniak.greendeer.proto.RunList;
 import com.kantoniak.greendeer.proto.RunServiceGrpc;
 import com.kantoniak.greendeer.proto.GetListResponse;
 import com.kantoniak.greendeer.proto.GetListRequest;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 
 /**
- * Server that manages startup/shutdown of a {@code Greeter} server.
+ * Server that manages startup/shutdown of a {@code RunServer} server.
  */
 public class RunServer {
   private static final Logger logger = Logger.getLogger(RunServer.class.getName());
@@ -66,22 +69,36 @@ public class RunServer {
 
   static class RunServiceImpl extends RunServiceGrpc.RunServiceImplBase {
 
+    private static final SimpleDateFormat datetimeFormatter = new SimpleDateFormat("dd.MM.yyyy");
+
+    private Run createRun(int meters, int seconds, String date, float weight) {
+
+      long timeFinishedAsSeconds = -1;
+      try {
+        timeFinishedAsSeconds = datetimeFormatter.parse(date).getTime() / 1000;
+      } catch (ParseException e) {
+        // Ignore
+      }
+
+      return Run.newBuilder()
+        .setMeters(meters).setTimeInSeconds(seconds)
+        .setTimeFinished(Timestamp.newBuilder().setSeconds(timeFinishedAsSeconds))
+        .setWeight(weight)
+        .build();
+
+    }
+
     @Override
     public void getList(GetListRequest req, StreamObserver<GetListResponse> responseObserver) {
-      logger.info("Server received getList() call");
+
+      SimpleDateFormat dtFormat = new SimpleDateFormat("dd.MM.yyyy");
 
       GetListResponse reply = GetListResponse.newBuilder()
           .setRunList(RunList.newBuilder().addAllRuns(Arrays.asList(
-                  Run.newBuilder().setMeters(7000).setTimeInSeconds(2620).build(),
-                  Run.newBuilder().setMeters(3100).setTimeInSeconds(991).build(),
-                  Run.newBuilder().setMeters(3100).setTimeInSeconds(921).build(),
-                  Run.newBuilder().setMeters(7000).setTimeInSeconds(2620).build(),
-                  Run.newBuilder().setMeters(3100).setTimeInSeconds(991).build(),
-                  Run.newBuilder().setMeters(3100).setTimeInSeconds(921).build(),
-                  Run.newBuilder().setMeters(7000).setTimeInSeconds(2620).build(),
-                  Run.newBuilder().setMeters(3100).setTimeInSeconds(991).build(),
-                  Run.newBuilder().setMeters(3100).setTimeInSeconds(921).build())
-              ).build())
+                  createRun(7000, 2620, "31.07.2017", 84.7f),
+                  createRun(3100, 991, "02.08.2017", 83.1f),
+                  createRun(3100, 921, "04.08.2017", 82.7f)
+              )).build())
           .build();
       
       responseObserver.onNext(reply);
