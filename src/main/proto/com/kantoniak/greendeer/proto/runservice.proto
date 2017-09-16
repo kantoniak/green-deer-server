@@ -1,0 +1,21 @@
+syntax = "proto3";
+package com.kantoniak.greendeer.proto;
+
+import "com/kantoniak/greendeer/proto/run.proto";
+
+option optimize_for = LITE_RUNTIME;
+option java_multiple_files = true;
+
+message GetListRequest {
+    // Empty
+}
+
+message GetListResponse {
+    RunList run_list = 1;
+}
+
+service RunService {
+
+    rpc GetList(GetListRequest) returns (GetListResponse) {}
+
+}

@@ -1,0 +1,18 @@
+syntax = "proto3";
+package com.kantoniak.greendeer.proto;
+
+import "google/protobuf/timestamp.proto";
+
+option optimize_for = LITE_RUNTIME;
+option java_multiple_files = true;
+
+message RunList {
+  repeated Run runs = 1;
+}
+
+message Run {
+  google.protobuf.Timestamp time_finished = 1;
+  int32 meters = 2;
+  int32 time_in_seconds = 3;
+  float weight = 4;
+}

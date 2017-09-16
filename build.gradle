@@ -1,0 +1,76 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.3'
+    }
+}
+
+plugins {
+  id "com.google.protobuf" version "0.8.1"
+  id "java"
+  id "application"
+}
+
+group 'com.kantoniak.greendeer.server'
+version '1.0-SNAPSHOT'
+
+protobuf {
+    protoc {
+        // The version of protoc must match protobuf-java. If you don't depend on
+        // protobuf-java directly, you will be transitively depending on the
+        // protobuf-java version that grpc depends on.
+        artifact = "com.google.protobuf:protoc:3.4.0"
+    }
+    plugins {
+        grpc {
+            artifact = 'io.grpc:protoc-gen-grpc-java:1.6.0'
+        }
+        lite {
+            artifact = "com.google.protobuf:protoc-gen-javalite:3.0.0"
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.builtins {
+                remove java
+            }
+        }
+        all()*.plugins {
+            lite {}
+            grpc {
+                option 'lite'
+            }
+        }
+    }
+    generatedFilesBaseDir = "$projectDir/src/generated"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile 'io.grpc:grpc-all:1.5.0'
+}
+
+task runServer(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.kantoniak.greendeer.server.RunServer'
+}
+
+startScripts.enabled = false
+
+task buildRunServer(type: CreateStartScripts) {
+  mainClassName = 'com.kantoniak.greendeer.server.RunServer'
+  applicationName = 'run-server'
+  outputDir = new File(project.buildDir, 'tmp')
+  classpath = jar.outputs.files + project.configurations.runtime
+}
+
+applicationDistribution.into("bin") {
+    from(buildRunServer)
+    fileMode = 0755
+}
