@@ -6,11 +6,16 @@ import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.util.logging.Logger;
 import com.google.protobuf.Timestamp;
+import com.kantoniak.greendeer.proto.AddRunsResponse;
+import com.kantoniak.greendeer.proto.AddRunsRequest;
+import com.kantoniak.greendeer.proto.GetListResponse;
+import com.kantoniak.greendeer.proto.GetListRequest;
+import com.kantoniak.greendeer.proto.GetStatsResponse;
+import com.kantoniak.greendeer.proto.GetStatsRequest;
 import com.kantoniak.greendeer.proto.Run;
 import com.kantoniak.greendeer.proto.RunList;
 import com.kantoniak.greendeer.proto.RunServiceGrpc;
-import com.kantoniak.greendeer.proto.GetListResponse;
-import com.kantoniak.greendeer.proto.GetListRequest;
+import com.kantoniak.greendeer.proto.Stats;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -99,6 +104,33 @@ public class RunServer {
                   createRun(3100, 991, "02.08.2017", 83.1f),
                   createRun(3100, 921, "04.08.2017", 82.7f)
               )).build())
+          .build();
+      
+      responseObserver.onNext(reply);
+      responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getStats(GetStatsRequest req, StreamObserver<GetStatsResponse> responseObserver) {
+
+      Stats stats = Stats.newBuilder()
+        .setMetersSum(75674)
+        .setMetersGoal(200000)
+        .setWeightLowest(81.7f)
+        .setWeightGoal(80.0f)
+        .build();
+      
+      GetStatsResponse reply = GetStatsResponse.newBuilder().setStats(stats).build();
+      
+      responseObserver.onNext(reply);
+      responseObserver.onCompleted();
+    }
+
+    @Override
+    public void addRuns(AddRunsRequest req, StreamObserver<AddRunsResponse> responseObserver) {
+
+      AddRunsResponse reply = AddRunsResponse.newBuilder()
+          .addAllAddedRuns(req.getRunsToAddList())
           .build();
       
       responseObserver.onNext(reply);
