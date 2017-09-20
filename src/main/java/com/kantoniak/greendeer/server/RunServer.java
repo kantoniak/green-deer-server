@@ -22,6 +22,7 @@ import com.kantoniak.greendeer.proto.Stats;
 import java.lang.System;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -178,12 +179,36 @@ public class RunServer {
     @Override
     public void addRuns(AddRunsRequest req, StreamObserver<AddRunsResponse> responseObserver) {
 
-      AddRunsResponse reply = AddRunsResponse.newBuilder()
-          .addAllAddedRuns(req.getRunsToAddList())
-          .build();
-      
-      responseObserver.onNext(reply);
-      responseObserver.onCompleted();
+      try {
+        final String insertQuery = "INSERT INTO runs(id, user_id, time_created, distance, time, weight) VALUES ((SELECT MAX(id)+1 FROM runs), 1, ?, ?, ?, ?)";
+        PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
+
+        for (Run run : req.getRunsToAddList()) {
+          // TODO(krzysztofa)
+          preparedStatement.setTimestamp(1, new java.sql.Timestamp(run.getTimeFinished().getSeconds() * 1000));
+          preparedStatement.setInt(2, run.getMeters());
+          preparedStatement.setInt(3, run.getTimeInSeconds());
+          if (run.getWeight() > 1.f) {
+            preparedStatement.setFloat(4, run.getWeight());
+          } else {
+            preparedStatement.setNull(4, java.sql.Types.REAL);
+          }
+          preparedStatement.executeUpdate();
+        }
+
+        AddRunsResponse reply = AddRunsResponse.newBuilder()
+            .addAllAddedRuns(req.getRunsToAddList())
+            .build();
+        
+        responseObserver.onNext(reply);
+        responseObserver.onCompleted();
+
+      } catch (SQLException e) {
+        e.printStackTrace();
+        responseObserver.onError(new StatusRuntimeException(Status.INTERNAL));
+      }
+
     }
+
   }
 }
