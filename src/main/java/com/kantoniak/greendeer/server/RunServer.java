@@ -132,6 +132,7 @@ public class RunServer {
             .setMeters(results.getInt("distance"))
             .setTimeInSeconds(results.getInt("time"))
             .setWeight(results.getFloat("weight"))
+            .setHasWeight(!results.wasNull())
             .build());
         }
 
@@ -163,7 +164,9 @@ public class RunServer {
         ResultSet goalResults = connection.createStatement().executeQuery("SELECT distance, weight FROM goals WHERE user_id=1");
         while(goalResults.next()) {
           statsBuilder.setMetersGoal(goalResults.getInt("distance"));
+          statsBuilder.setHasMetersGoal(!currentResults.wasNull());
           statsBuilder.setWeightGoal(goalResults.getFloat("weight"));
+          statsBuilder.setHasWeightGoal(!currentResults.wasNull());
         }
         
         GetStatsResponse reply = GetStatsResponse.newBuilder().setStats(statsBuilder).build();
@@ -188,7 +191,7 @@ public class RunServer {
           preparedStatement.setTimestamp(1, new java.sql.Timestamp(run.getTimeFinished().getSeconds() * 1000));
           preparedStatement.setInt(2, run.getMeters());
           preparedStatement.setInt(3, run.getTimeInSeconds());
-          if (run.getWeight() > 1.f) {
+          if (run.getHasWeight()) {
             preparedStatement.setFloat(4, run.getWeight());
           } else {
             preparedStatement.setNull(4, java.sql.Types.REAL);

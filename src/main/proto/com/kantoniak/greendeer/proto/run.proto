@@ -15,11 +15,14 @@ message Run {
   int32 meters = 2;
   int32 time_in_seconds = 3;
   float weight = 4;
+  bool has_weight = 5;
 }
 
 message Stats {
   int32 meters_sum = 1;
   int32 meters_goal = 2;
-  float weight_lowest = 3;
-  float weight_goal = 4;
+  bool has_meters_goal = 3;
+  float weight_lowest = 4;
+  float weight_goal = 5;
+  bool has_weight_goal = 6;
 }
