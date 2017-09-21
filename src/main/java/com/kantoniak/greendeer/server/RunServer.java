@@ -123,7 +123,7 @@ public class RunServer {
     public void getList(GetListRequest req, StreamObserver<GetListResponse> responseObserver) {
 
       try {
-        ResultSet results = connection.createStatement().executeQuery("SELECT time_created, distance, time, weight FROM runs WHERE user_id=1");
+        ResultSet results = connection.createStatement().executeQuery("SELECT time_created, distance, time, weight FROM runs WHERE user_id=1 ORDER BY time_created DESC");
         RunList.Builder runsBuilder = RunList.newBuilder();
 
         while(results.next()) {
