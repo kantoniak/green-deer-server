@@ -122,12 +122,16 @@ public class RunServer {
     @Override
     public void getList(GetListRequest req, StreamObserver<GetListResponse> responseObserver) {
 
+      final int userId = 1;
+
       try {
-        ResultSet results = connection.createStatement().executeQuery("SELECT time_created, distance, time, weight FROM runs WHERE user_id=1 ORDER BY time_created DESC");
+        ResultSet results = connection.createStatement().executeQuery("SELECT id, user_id, time_created, distance, time, weight FROM runs WHERE user_id=" + userId + " ORDER BY time_created DESC");
         RunList.Builder runsBuilder = RunList.newBuilder();
 
         while(results.next()) {
           runsBuilder.addRuns(Run.newBuilder()
+            .setId(results.getInt("id"))
+            .setUserId(results.getInt("user_id"))
             .setTimeFinished(Timestamp.newBuilder().setSeconds(results.getTimestamp("time_created").getTime() / 1000))
             .setMeters(results.getInt("distance"))
             .setTimeInSeconds(results.getInt("time"))
@@ -152,8 +156,11 @@ public class RunServer {
     @Override
     public void getStats(GetStatsRequest req, StreamObserver<GetStatsResponse> responseObserver) {
 
+      final int userId = 1;
+
       try {
         Stats.Builder statsBuilder = Stats.newBuilder();
+        statsBuilder.setUserId(userId);
 
         ResultSet currentResults = connection.createStatement().executeQuery("SELECT SUM(distance) AS distance_total, MIN(weight) AS weight_min FROM runs WHERE user_id=1");
         while(currentResults.next()) {
@@ -182,25 +189,34 @@ public class RunServer {
     @Override
     public void addRuns(AddRunsRequest req, StreamObserver<AddRunsResponse> responseObserver) {
 
+      final int userId = 1;
+
       try {
-        final String insertQuery = "INSERT INTO runs(id, user_id, time_created, distance, time, weight) VALUES ((SELECT MAX(id)+1 FROM runs), 1, ?, ?, ?, ?)";
+        final String insertQuery = "INSERT INTO runs(id, user_id, time_created, distance, time, weight) VALUES ((SELECT MAX(id)+1 FROM runs), ?, ?, ?, ?, ?) RETURNING id";
         PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
 
-        for (Run run : req.getRunsToAddList()) {
-          // TODO(krzysztofa)
-          preparedStatement.setTimestamp(1, new java.sql.Timestamp(run.getTimeFinished().getSeconds() * 1000));
-          preparedStatement.setInt(2, run.getMeters());
-          preparedStatement.setInt(3, run.getTimeInSeconds());
+        RunList.Builder runsBuilder = RunList.newBuilder();
+
+        for (Run run : req.getRunsToAdd().getRunsList()) {
+          preparedStatement.setInt(1, userId);
+          preparedStatement.setTimestamp(2, new java.sql.Timestamp(run.getTimeFinished().getSeconds() * 1000));
+          preparedStatement.setInt(3, run.getMeters());
+          preparedStatement.setInt(4, run.getTimeInSeconds());
           if (run.getHasWeight()) {
-            preparedStatement.setFloat(4, run.getWeight());
+            preparedStatement.setFloat(5, run.getWeight());
           } else {
-            preparedStatement.setNull(4, java.sql.Types.REAL);
+            preparedStatement.setNull(5, java.sql.Types.REAL);
           }
-          preparedStatement.executeUpdate();
+          ResultSet response = preparedStatement.executeQuery();
+          response.next();
+
+          runsBuilder.addRuns(Run.newBuilder(run)
+            .setId(response.getInt(1))
+            .setUserId(userId));
         }
 
         AddRunsResponse reply = AddRunsResponse.newBuilder()
-            .addAllAddedRuns(req.getRunsToAddList())
+            .setAddedRuns(runsBuilder)
             .build();
         
         responseObserver.onNext(reply);

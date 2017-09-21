@@ -23,11 +23,11 @@ message GetStatsResponse {
 }
 
 message AddRunsRequest {
-    repeated Run runs_to_add = 1;
+    RunList runs_to_add = 1;
 }
 
 message AddRunsResponse {
-    repeated Run added_runs = 1;
+    RunList added_runs = 1;
 }
 
 service RunService {
