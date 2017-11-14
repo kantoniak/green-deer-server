@@ -30,8 +30,26 @@ message AddRunsResponse {
     RunList added_runs = 1;
 }
 
+message EditRunsRequest {
+    RunList runs_to_edit = 1;
+}
+
+message EditRunsResponse {
+    RunList changed_runs = 1;
+}
+
+message DeleteRunsRequest {
+    repeated int32 ids = 1;
+}
+
+message DeleteRunsResponse {
+    repeated int32 removed_ids = 1;
+}
+
 service RunService {
     rpc GetList(GetListRequest) returns (GetListResponse) {}
     rpc GetStats(GetStatsRequest) returns (GetStatsResponse) {}
     rpc AddRuns(AddRunsRequest) returns (AddRunsResponse) {}
+    rpc EditRuns(EditRunsRequest) returns (EditRunsResponse) {}
+    rpc DeleteRuns(DeleteRunsRequest) returns (DeleteRunsResponse) {}
 }

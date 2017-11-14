@@ -10,6 +10,10 @@ import java.util.logging.Logger;
 import com.google.protobuf.Timestamp;
 import com.kantoniak.greendeer.proto.AddRunsResponse;
 import com.kantoniak.greendeer.proto.AddRunsRequest;
+import com.kantoniak.greendeer.proto.DeleteRunsResponse;
+import com.kantoniak.greendeer.proto.DeleteRunsRequest;
+import com.kantoniak.greendeer.proto.EditRunsResponse;
+import com.kantoniak.greendeer.proto.EditRunsRequest;
 import com.kantoniak.greendeer.proto.GetListResponse;
 import com.kantoniak.greendeer.proto.GetListRequest;
 import com.kantoniak.greendeer.proto.GetStatsResponse;
@@ -19,6 +23,7 @@ import com.kantoniak.greendeer.proto.RunList;
 import com.kantoniak.greendeer.proto.RunServiceGrpc;
 import com.kantoniak.greendeer.proto.Stats;
 
+import java.lang.Object;
 import java.lang.System;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -28,7 +33,9 @@ import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * Server that manages startup/shutdown of a {@code RunServer} server.
@@ -227,6 +234,69 @@ public class RunServer {
         responseObserver.onError(new StatusRuntimeException(Status.INTERNAL));
       }
 
+    }
+
+    public void editRuns(EditRunsRequest req, StreamObserver<EditRunsResponse> responseObserver) {
+
+      final int userId = 1;
+
+      try {
+        final String insertQuery = "UPDATE runs SET (time_created, distance, time, weight) = (?, ?, ?, ?) WHERE id = ? AND user_id = ?";
+        PreparedStatement preparedStatement = connection.prepareStatement(insertQuery);
+
+        RunList.Builder runsBuilder = RunList.newBuilder();
+
+        for (Run run : req.getRunsToEdit().getRunsList()) {
+          preparedStatement.setInt(5, run.getId());
+          preparedStatement.setInt(6, userId);
+          preparedStatement.setTimestamp(1, new java.sql.Timestamp(run.getTimeFinished().getSeconds() * 1000));
+          preparedStatement.setInt(2, run.getMeters());
+          preparedStatement.setInt(3, run.getTimeInSeconds());
+          if (run.getHasWeight()) {
+            preparedStatement.setFloat(4, run.getWeight());
+          } else {
+            preparedStatement.setNull(4, java.sql.Types.REAL);
+          }
+          preparedStatement.executeUpdate();
+
+          runsBuilder.addRuns(run);
+        }
+
+        EditRunsResponse reply = EditRunsResponse.newBuilder()
+            .setChangedRuns(runsBuilder)
+            .build();
+        
+        responseObserver.onNext(reply);
+        responseObserver.onCompleted();
+
+      } catch (SQLException e) {
+        e.printStackTrace();
+        responseObserver.onError(new StatusRuntimeException(Status.INTERNAL));
+      }
+
+    }
+
+    @Override
+    public void deleteRuns(DeleteRunsRequest request, StreamObserver<DeleteRunsResponse> responseObserver) {
+
+      final int userId = 1;
+      final List<Integer> ids = request.getIdsList();
+
+      try {
+        String idsList = ids.stream().map(Object::toString).collect(Collectors.joining(", "));
+        connection.createStatement().executeUpdate("DELETE FROM runs WHERE user_id=" + userId + " AND id IN (" + idsList + ")");
+
+        DeleteRunsResponse reply = DeleteRunsResponse.newBuilder()
+            .addAllRemovedIds(ids)
+            .build();
+        
+        responseObserver.onNext(reply);
+        responseObserver.onCompleted();
+      } catch (SQLException e) {
+        e.printStackTrace();
+        responseObserver.onError(new StatusRuntimeException(Status.INTERNAL));
+      }
+      
     }
 
   }
